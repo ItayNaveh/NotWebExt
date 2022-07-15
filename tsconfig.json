@@ -5,8 +5,10 @@
 		
 		"strict": true, // I will regret this later
 		"importsNotUsedAsValues": "error",
+		"allowSyntheticDefaultImports": true,
 
 		"outDir": "build/",
+		"declaration": true,
 	},
 
 	"include": [ "src/**/*" ],

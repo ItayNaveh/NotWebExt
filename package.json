@@ -5,6 +5,7 @@
   "main": "build/lib.js",
   "type": "module",
   "bin": "bin/not-web-ext",
+  "types": "build/lib.d.ts",
   "scripts": {
     "build": "tsc"
   },
@@ -18,7 +19,11 @@
     "url": "https://github.com/ItayNaveh/NotWebExt/issues"
   },
   "homepage": "https://github.com/ItayNaveh/NotWebExt#readme",
+  "dependencies": {
+    "ini": "^2.0.0"
+  },
   "devDependencies": {
+    "@types/ini": "^1.3.30",
     "@types/node": "^16.4.13",
     "typescript": "^4.3.5"
   }

@@ -1,3 +1,1 @@
-export const main = (options: any) => {
-	console.log({ options });
-};
+export { default as run } from "./cmd/run.js";
