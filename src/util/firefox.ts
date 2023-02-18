@@ -9,6 +9,7 @@ interface SpawnConfig {
 	profile_name?: string,
 	profile_path?: string,
 	browser_console: boolean,
+	tabs: string[],
 
 	port: number,
 };
@@ -32,6 +33,7 @@ export const runFirefox = (config: SpawnConfig): ChildProcessWithoutNullStreams 
 	if (config.profile_path) args.push("-profile", config.profile_path);
 
 	if (config.browser_console) args.push("-jsconsole");
+	args.push(...config.tabs);
 
 	args.push("-start-debugger-server", config.port.toString());
 
@@ -49,11 +51,13 @@ export class Firefox {
 	addonID?: string;
 	addonActor?: string;
 
+	$installExtensionResolver!: Function;
+
 	constructor() {}
 
 	private _connect(port: number): Promise<net.Socket> {
 		return new Promise((resolve, reject) => {
-			const cxn = net.createConnection(port);
+			const cxn = net.createConnection({ port, host: "127.0.0.1" });
 			cxn.on("error", reject);
 			cxn.once("data", (data) => {
 				log.debug("initial data", data.toString());
@@ -68,20 +72,23 @@ export class Firefox {
 				const cxn = await this._connect(port);
 				this.cxn = cxn;
 				break;
-			} catch (err) {
-				// @ts-ignore
-				if (err.code != "ECONNREFUSED" || i == max_tries - 1) throw err;
+			} catch (err: any) {
+				if (err.code != "ECONNREFUSED" || i == max_tries - 1) {
+					console.error("Failed to connect to Firefox");
+					throw err;
+				}
+
 				await new Promise(r => setTimeout(r, 100));
 			}
 		}
 
 		this.cxn.on("error", (err) => {
-			console.error("firefox remote err", err);
+			console.error("Firefox remote error", err);
 			throw err;
 		});
 
 		this.cxn.on("end", () => {
-			log.print("connection ended");
+			log.print("Connection ended");
 		});
 
 		this.cxn.on("data", (data) => {
@@ -111,6 +118,7 @@ export class Firefox {
 			case this.addonsActor:
 				log.debug("msg from addons actor", data);
 				if (data.error) throw new Error(data.message);
+				this.$installExtensionResolver();
 
 				this.addonID = data.addon.id;
 
@@ -148,12 +156,16 @@ export class Firefox {
 	}
 
 	installExtension(extension_path: string) {
-		this.extension_path = path.resolve(extension_path);
-		log.debug("installing", this.extension_path);
-
-		this.sendRemoteMessage({
-			to: "root",
-			type: "getRoot",
+		return new Promise((resolve, reject) => {
+			this.$installExtensionResolver = resolve;
+			
+			this.extension_path = path.resolve(extension_path);
+			log.debug("installing", this.extension_path);
+	
+			this.sendRemoteMessage({
+				to: "root",
+				type: "getRoot",
+			});
 		});
 	}
 
